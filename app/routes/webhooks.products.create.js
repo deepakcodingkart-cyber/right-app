@@ -75,6 +75,7 @@ export const action = async ({ request }) => {
     // Unique event identifier to prevent duplicates
     const eventId = request.headers.get('x-shopify-event-id');
 
+    // Authenticate Webhook
     const { shop, payload } = await authenticate.webhook(request);
 
     // Ignore duplicates
