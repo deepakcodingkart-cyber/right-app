@@ -1,13 +1,12 @@
-import BetterQueue from "better-queue";
-import { emailSendOnProductCreate } from "../jobs/index.js";
+import Queue from "better-queue";
+import { job } from "../jobs/index.js";
 
-export const queue = new BetterQueue(emailSendOnProductCreate, {
-  concurrent: 1,   // process 1 task at a time
-  maxRetries: 3,   // retry on failure
-  retryDelay: 1000 // wait 1s before retry
+export const queue = new Queue(job, {
+  concurrent: 1,
+  maxRetries: 3,
+  retryDelay: 1000,
 });
 
-// Logs (optional but helpful)
 queue.on("task_finish", (id, result) => {
   console.log(`✅ Task ${id} finished:`, result);
 });
