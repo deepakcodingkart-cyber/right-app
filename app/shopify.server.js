@@ -22,10 +22,10 @@ const shopify = shopifyApp({
         deliveryMethod: DeliveryMethod.Http,
         callbackUrl: '/webhooks/products/create',
       },
-      // ORDERS_CREATE: {
-      //   deliveryMethod: DeliveryMethod.Http,
-      //   callbackUrl: '/webhooks/orders/create',
-      // },
+      ORDERS_CREATE: {
+        deliveryMethod: DeliveryMethod.Http,
+        callbackUrl: '/webhooks/orders/create',
+      },
     },
     
     hooks: {
@@ -35,7 +35,7 @@ const shopify = shopifyApp({
           await shopify.registerWebhooks({ session });
           console.log(`✅ Webhooks registered for: ${session.shop}`);
           console.log(`- PRODUCTS_CREATE: /webhooks/products/create`);
-          // console.log(`- ORDERS_CREATE: /webhooks/orders/create`);
+          console.log(`- ORDERS_CREATE: /webhooks/orders/create`);
         } catch (error) {
           console.error('❌ Webhook registration failed:', error);
         }
