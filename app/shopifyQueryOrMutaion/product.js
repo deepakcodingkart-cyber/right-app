@@ -10,6 +10,7 @@ export const GET_PRODUCTS = `
             id
             title
             sku
+            price 
             availableForSale
             selectedOptions {
               name
