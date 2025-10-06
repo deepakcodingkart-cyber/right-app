@@ -8,6 +8,56 @@ import {
 } from "../shopifyQueryOrMutaion/order.js";
 
 
+function pickReplacementVariant(subscriptionLineItems, products) {
+  if (!subscriptionLineItems?.length || !products?.length) return null;
+
+  const firstItem = subscriptionLineItems[0];
+
+  // Extract size and taste dynamically
+  let extractedSize = null;
+  let extractedTaste = null;
+
+  if (firstItem.variant_options && firstItem.variant_options.length) {
+    firstItem.variant_options.forEach(opt => {
+      const lower = opt.toLowerCase();
+      if (/\d+\s?(g|gram|kg|ml)/.test(lower)) extractedSize = lower;
+      if (/light|medium|dark/.test(lower)) extractedTaste = lower;
+    });
+  } else if (firstItem.variant_title) {
+    const lowerTitle = firstItem.variant_title.toLowerCase();
+    const sizeMatch = lowerTitle.match(/(\d+\s?(g|gram|kg|ml))/);
+    if (sizeMatch) extractedSize = sizeMatch[0];
+    const tasteMatch = lowerTitle.match(/(light|medium|dark)\s*roast/);
+    if (tasteMatch) extractedTaste = tasteMatch[0];
+  }
+
+  // Find replacement variant dynamically
+  let replacementVariant = null;
+  outer: for (const product of products) {
+    for (const variant of product.variants.nodes) {
+      const opts = (variant.selectedOptions || []).reduce((acc, o) => {
+        acc[o.name.toLowerCase().trim()] = o.value.toLowerCase().trim();
+        return acc;
+      }, {});
+
+      const isSubscription =
+        (variant.title || "").toLowerCase().includes("subscription") ||
+        (product.title || "").toLowerCase().includes("subscription");
+      if (isSubscription) continue;
+
+      const sizeMatch = (opts.size || "").includes(extractedSize) || (variant.title || "").toLowerCase().includes(extractedSize);
+      const tasteMatch = (opts.taste || "").includes(extractedTaste) || (variant.title || "").toLowerCase().includes(extractedTaste);
+
+      if (sizeMatch && tasteMatch) {
+        replacementVariant = variant;
+        break outer;
+      }
+    }
+  }
+
+  return replacementVariant;
+}
+
 
 export const action = async ({ request }) => {
   try {
@@ -25,6 +75,8 @@ export const action = async ({ request }) => {
       li => (li.title || "").toLowerCase().includes("subscription")
     );
 
+    console.log("🔍 Subscription line items found:", subscriptionLineItems);
+
     if (!subscriptionLineItems?.length) {
       console.log("ℹ️ No subscription line items found — nothing to do.");
       return new Response("ok", { status: 200 });
@@ -40,30 +92,8 @@ export const action = async ({ request }) => {
     const products = productData.data?.products?.nodes || [];
 
     // 3️⃣ Pick replacement variant dynamically
-    let replacementVariant = null;
-    outer: for (const product of products) {
-      for (const variant of product.variants.nodes) {
-        const opts = (variant.selectedOptions || []).reduce((acc, o) => {
-          acc[o.name.toLowerCase().trim()] = o.value.toLowerCase().trim();
-          return acc;
-        }, {});
-
-        const isSubscription =
-          (variant.title || "").toLowerCase().includes("subscription") ||
-          (product.title || "").toLowerCase().includes("subscription");
-
-        if (isSubscription) continue;
-
-        const sizeMatch = (opts.size || "").includes("750") || (variant.title || "").toLowerCase().includes("750");
-        const tasteMatch = (opts.taste || "").includes("light roast") || (variant.title || "").toLowerCase().includes("light roast");
-
-        if (sizeMatch && tasteMatch) {
-          replacementVariant = variant;
-          console.log("✅ Replacement variant found:", variant.title, variant.id);
-          break outer;
-        }
-      }
-    }
+    let replacementVariant = pickReplacementVariant(subscriptionLineItems, products);
+    console.log("🔍 Replacement variant selected:", replacementVariant ? `${replacementVariant.id} (${replacementVariant.title})` : "None");
 
     // 3a️⃣ Fallback
     if (!replacementVariant) {
@@ -86,8 +116,11 @@ export const action = async ({ request }) => {
 
       const targetItem = calcOrder.lineItems.nodes.find(li => {
         const numericId = li.variant?.id?.split("/").pop();
+        console.log("🗑️ Comparing line item variant ID:", numericId, "with subscription variant ID:", subItem.variant_id);
         return numericId === String(subItem.variant_id);
       });
+      // console.log("🗑️ Looking for line item with variant ID:", subItem.variant_id);
+      // console.log("Numeric Id ")
 
       if (!targetItem) {
         console.warn("⚠️ Could not find matching line item:", subItem.title);
