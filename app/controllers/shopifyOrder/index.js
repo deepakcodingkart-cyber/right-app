@@ -2,26 +2,24 @@ import ShopifyOrderService from "../../services/shopifyorder/index.js";
 import { pickReplacementVariant } from "../../utils/pickReplacementVariant.js";
 import { AppError, handleError } from "../../utils/errorHandler.js";
 import { createRecord, updateRecord } from "../../utils/dbservice.js";
+import { getAccessToken } from "../../utils/getAccessToken.js";
 
 /**
  * Handles Shopify order webhook for subscription replacements.
  * @param {Object} payload - Shopify webhook payload (order data)
- * @param {Object} admin - Admin/shop context for Shopify API calls
- * @returns {Promise<Object>} Result object with success/failure info
+ * @returns {Promise<void>}
  */
-
-
-export async function handleOrderWebhook(payload, admin) {
-  let logRecord = null;          // Will hold DB log entry
-  let currentStep = "WEBHOOK_RECEIVED";  // Track current processing step for logging
+export async function handleOrderWebhook(payload) {
+  let logRecord = null;
+  let currentStep = "WEBHOOK_RECEIVED";
 
   try {
     console.log("🔄 Controller: Received replacement request");
 
     // ✅ Step 1: Check for subscription items in the order
     currentStep = "CHECK_SUBSCRIPTION";
-    const subscriptionLineItems = (payload?.line_items || []).filter(li => {
-      const propertyNames = (li?.properties || []).map(p => p.name?.toLowerCase());
+    const subscriptionLineItems = (payload?.line_items || []).filter((li) => {
+      const propertyNames = (li?.properties || []).map((p) => p.name?.toLowerCase());
       return (
         propertyNames.includes("subscription") ||
         li?.title?.toLowerCase().includes("subscription") ||
@@ -30,35 +28,38 @@ export async function handleOrderWebhook(payload, admin) {
       );
     });
 
-    // If no subscription items, exit early
     if (!subscriptionLineItems.length) {
       console.log("ℹ️ No subscription items found - nothing to do");
-      // return { success: true, message: "No subscription items to replace" };
-      return
+      return;
     }
 
-    // ✅ Step 2: Create initial DB log entry for tracking
+    // ✅ Step 2: Create initial DB log entry
     logRecord = await createRecord("order_subscription_log", {
       order_id: payload?.admin_graphql_api_id,
-      status: "SUCCESS",   // assume success until proven failed
+      status: "SUCCESS",
       step: currentStep,
-      payload
+      payload,
     });
+
+    // ✅ Step 3: Get shop info and access token
+    const accessToken = await getAccessToken();
+    const shop = process.env.SHOP_NAME;
 
     const orderService = new ShopifyOrderService();
 
-    // ✅ Step 3: Begin order edit in Shopify
+    // ✅ Step 4: Begin order edit
     currentStep = "BEGIN_ORDER_EDIT";
     const { calcOrder, calcOrderId } = await orderService.beginOrderEdit(
-      admin,
+      shop,
+      accessToken,
       payload.admin_graphql_api_id
     );
 
-    // ✅ Step 4: Fetch available replacement products
+    // ✅ Step 5: Fetch available replacement products
     currentStep = "FETCH_PRODUCTS";
-    const products = await orderService.fetchReplacementProducts(admin);
+    const products = await orderService.fetchReplacementProducts(shop, accessToken);
 
-    // ✅ Step 5: Pick the most suitable replacement variant
+    // ✅ Step 6: Pick the most suitable replacement variant
     currentStep = "PICK_REPLACEMENT";
     const replacementVariant = pickReplacementVariant(subscriptionLineItems, products);
     if (!replacementVariant)
@@ -67,44 +68,55 @@ export async function handleOrderWebhook(payload, admin) {
         context: { subscriptionLineItems },
       });
 
-    // ✅ Step 6: Remove original subscription items from order
+    // ✅ Step 7: Remove original subscription items
     currentStep = "REMOVE_SUBSCRIPTION";
-    await orderService.removeSubscriptionItems(admin, calcOrderId, calcOrder, subscriptionLineItems);
+    await orderService.removeSubscriptionItems(
+      shop,
+      accessToken,
+      calcOrderId,
+      calcOrder,
+      subscriptionLineItems
+    );
 
-    // ✅ Step 7: Add replacement variant to order
+    // ✅ Step 8: Add replacement variant
     currentStep = "ADD_REPLACEMENT";
-    const addedLineItemId = await orderService.addReplacementVariant(admin, calcOrderId, replacementVariant);
+    const addedLineItemId = await orderService.addReplacementVariant(
+      shop,
+      accessToken,
+      calcOrderId,
+      replacementVariant
+    );
 
-    // ✅ Step 8: Apply discount if replacement is cheaper than subscription item
+    // ✅ Step 9: Apply discount if needed
     currentStep = "APPLY_DISCOUNT";
     const discountPercent = orderService.calculateDiscountPercent(
       subscriptionLineItems[0].price,
       replacementVariant.price
     );
     if (discountPercent > 0) {
-      await orderService.applyDiscountToLineItem(admin, calcOrderId, addedLineItemId, discountPercent);
+      await orderService.applyDiscountToLineItem(
+        shop,
+        accessToken,
+        calcOrderId,
+        addedLineItemId,
+        discountPercent
+      );
     }
 
-    // ✅ Step 9: Commit order edit to Shopify
+    // ✅ Step 10: Commit order edit
     currentStep = "COMMIT_ORDER_EDIT";
-    await orderService.commitOrderEdit(admin, calcOrderId);
+    await orderService.commitOrderEdit(shop, accessToken, calcOrderId);
 
-    // ✅ Step 10: Return success response
-    // return { success: true, replacementVariantId: replacementVariant.id };
+    console.log("✅ Subscription replacement completed successfully");
 
   } catch (err) {
-    // Handle errors globally
     handleError(err);
 
-    // Update log in DB to indicate failure
     if (logRecord) {
       await updateRecord("order_subscription_log", logRecord.id, {
         status: "FAIL",
-        step: currentStep
+        step: currentStep,
       });
     }
-
-    // // Return failure response
-    // return { success: false, error: err.message, failedStep: currentStep };
   }
 }

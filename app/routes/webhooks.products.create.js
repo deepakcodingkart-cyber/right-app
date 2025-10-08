@@ -1,5 +1,5 @@
 import { authenticate } from "../shopify.server.js";
-import { queue } from "../queue/index.js";
+import { queue } from "../queue/redisQueue/index.js";
 
 const processedEvents = new Map();
 

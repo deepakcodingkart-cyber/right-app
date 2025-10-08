@@ -1,5 +1,5 @@
 import Queue from "better-queue";
-import { job } from "../jobs/index.js";
+import { job } from "../../jobs/redisJob/index.js";
 
 export const queue = new Queue(job, {
   concurrent: 1,
