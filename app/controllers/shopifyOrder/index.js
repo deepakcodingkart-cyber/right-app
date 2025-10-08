@@ -1,6 +1,7 @@
 import ShopifyOrderService from "../../services/shopifyorder/index.js";
 import { pickReplacementVariant } from "../../utils/pickReplacementVariant.js";
 import { AppError, handleError } from "../../utils/errorHandler.js";
+import prisma from "../../db.server.js"; // prisma client import
 
 export async function handleOrderWebhook(payload, admin) {
   try {
@@ -20,6 +21,22 @@ export async function handleOrderWebhook(payload, admin) {
       console.log("ℹ️ No subscription items found - nothing to do");
       return { success: true, message: "No subscription items to replace" };
     }
+
+    const dummyLog = await prisma.order_subscription_log.create({
+      data: {
+        order_id: payload?.admin_graphql_api_id,
+        status: "SUCCESS",
+        step: "Found_subscription_product",
+        payload: payload
+      }
+    });
+
+    console.log("✅ Database log created:", {
+      id: dummyLog.id,
+      order_id: dummyLog.order_id,
+      status: dummyLog.status,
+      step: dummyLog.step
+    });
 
     const orderService = new ShopifyOrderService();
 
