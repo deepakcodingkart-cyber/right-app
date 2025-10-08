@@ -15,20 +15,12 @@ export function calculateDiscount(lineItemPrice, replacementPrice) {
       console.error("❌ Invalid price values:", { lineItemPrice, replacementPrice });
       return 0;
     }
-
     if (repPrice <= 0) {
       console.error("❌ Replacement price must be greater than 0");
       return 0;
     }
-
-    console.log("💰 Calculating discount:");
-    console.log("  - Subscription price:", subPrice);
-    console.log("  - Replacement price:", repPrice);
-
     const discountAmount = repPrice - subPrice;
     const discountPercentage = (discountAmount / repPrice) * 100;
-
-    console.log("  - Discount amount:", discountAmount);
     console.log("  - Discount percentage:", discountPercentage.toFixed(2) + "%");
 
     return discountPercentage > 0 ? discountPercentage : 0;
