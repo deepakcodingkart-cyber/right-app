@@ -1,47 +1,104 @@
-// // import { Worker } from "bullmq";
+// // worker/shopifyOrderWorker.js
+
 // import pkg from "bullmq";
+// import { connection } from "../../config/redis/index.js";
 // import { handleOrderWebhook } from "../../controllers/shopifyOrder/index.js";
-// import { getRedisClient, connection } from "../../config/redis";
-// import { shopifyOrderQueue } from "../../queue/shopifyOrderQueue/index.js";
-
-
+// import {
+//   generateSuccessEmailBody,
+//   generateFailureEmailBody,
+//   sendEmail,
+// } from "../../utils/messageTemplate/orderReplacementMessage.js";
 
 // const { Worker } = pkg;
+
+// // The name of the queue the worker will listen to
+// const QUEUE_NAME = "shopifyOrderQueue";
+
+// // Store successful job results temporarily for batch email sending
+// let successBatch = [];
+
+// // Worker (processes jobs from the queue)
 // const shopifyOrderWorker = new Worker(
-//   shopifyOrderQueue.name,
+//   QUEUE_NAME,
 //   async (job) => {
-//     const { payload, admin } = job.data;
-
+//     const { payload } = job.data;
 //     try {
-//       // Run full Shopify order webhook logic
-//       await handleOrderWebhook(payload, admin);
-
-//       // Optional: log completion in Redis
-//       const client = await getRedisClient();
-//       await client.rPush(
-//         "shopify_order_completed",
-//         JSON.stringify({ orderId: payload?.admin_graphql_api_id, timestamp: new Date() })
-//       );
-
-//       return { success: true };
+//       await handleOrderWebhook(payload);
+//       // Return data for the 'completed' event
+//       return { success: true, orderId: payload?.admin_graphql_api_id || payload?.id };
 //     } catch (err) {
-//       console.error(`❌ Job failed for order ${payload?.admin_graphql_api_id}:`, err.message);
-//       throw err; // rethrow for BullMQ to handle retries
+//       // 1. Log the error immediately
+//       console.error(`Error processing Job ${job.id}:`, err);
+//       // 2. Re-throw an error to signal BullMQ that the job FAILED.
+//       // This is crucial for triggering retries or the 'failed' event.
+//       throw new Error(`Job failed for order ${payload?.admin_graphql_api_id}: ${err.message}`);
 //     }
 //   },
-//   {
-//     connection,
-//     concurrency: 2,      // adjust concurrency as needed
-//     lockDuration: 30000, // 30s lock per job
-//   }
+//   { connection, concurrency: 2, lockDuration: 30000 }
 // );
 
-// shopifyOrderWorker.on("completed", (job) => {
-//   console.log(`✅ Shopify order job completed: ${job.id}`);
+
+// // ---------------------------------------------
+// // Worker Event Handlers
+// // ---------------------------------------------
+
+// // Handler for completed jobs
+// shopifyOrderWorker.on("completed", async (job, result) => {
+//   console.log(`✅ Job completed: ${job.id}`);
+
+//   // Push result to batch
+//   successBatch.push(result);
+//   console.log("batch ", successBatch)
+
+//   // Send a batch email notification when 3 successful jobs are processed
+//   if (successBatch.length >= 3) {
+//     const body = generateSuccessEmailBody(successBatch);
+//     await sendEmail("✅ Batch of 3 Orders Completed", body);
+
+//     // Reset batch
+//     successBatch = [];
+//   }
 // });
 
-// shopifyOrderWorker.on("failed", (job, err) => {
-//   console.error(`❌ Shopify order job failed: ${job.id}`, err.message);
+// // Handler for failed job attempts (including permanent failures)
+// shopifyOrderWorker.on("failed", async (job, err) => {
+//   // 1. Get the maximum attempts allowed.
+//   const maxAttempts = job.opts.attempts || 3;
+
+//   // 2. Check for final permanent failure (no more retries).
+//   if (job.attemptsMade >= maxAttempts) {
+//     console.error(`❌ Job permanently failed after ${job.attemptsMade} attempts: ${job.id}`, err.message);
+//     const failData = {
+//       orderId: job?.data?.payload?.admin_graphql_api_id || job?.data?.payload?.id,
+//       error: err.message,
+//       timestamp: new Date().toISOString(),
+//       attempts: job.attemptsMade,
+//       maxAttempts: maxAttempts
+//     };
+
+//     const body = generateFailureEmailBody(failData);
+//     // Send a final email for permanent failure.
+//     await sendEmail("❌ Order Processing Failed (Permanent)", body);
+
+//   } else {
+//     // Log the retry failure, but suppress email notification for intermediate retries
+//     console.warn(`⚠️ Job attempt failed: ${job.id}. Retrying (${job.attemptsMade} of ${maxAttempts}).`);
+//   }
 // });
 
+// // Handler for worker-level errors (e.g., connection issues, internal BullMQ errors)
+// shopifyOrderWorker.on("error", async (err) => {
+//   console.error(`🔥 Worker error:`, err);
+
+//   const body = `
+//     <h3>🔥 Worker Crashed</h3>
+//     <p>Error: ${err.message}</p>
+//     <p>Timestamp: ${new Date().toISOString()}</p>
+//   `;
+//   await sendEmail("🔥 Worker Crashed - ShopifyOrderWorker", body);
+// });
+
+// // Initial startup log
 // console.log("🟢 ShopifyOrderWorker started and listening for jobs...");
+
+// // Note: You don't need to export the worker, as it starts listening immediately when instantiated.
