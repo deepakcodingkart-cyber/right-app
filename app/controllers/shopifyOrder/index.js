@@ -118,5 +118,6 @@ export async function handleOrderWebhook(payload) {
         step: currentStep,
       });
     }
+    throw err 
   }
 }

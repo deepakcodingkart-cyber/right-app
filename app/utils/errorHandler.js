@@ -11,7 +11,7 @@ export class AppError extends Error {
   }
 }
 
-export const handleError = (error) => {
+export const handleError = async (error) => {
   if (error instanceof AppError) {
     console.error(`\n🔥 [${error.layer} ERROR] at ${error.timestamp}`);
     console.error("Message:", error.message);
@@ -24,3 +24,4 @@ export const handleError = (error) => {
     console.error(error.stack || error);
   }
 };
+

@@ -14,7 +14,7 @@ export const action = async ({ request }) => {
     // Add job to BullMQ queue
     await shopifyOrderQueue.add("shopifyOrderJob", { payload });
 
-    console.log("wait kar rha tha")
+    // console.log("wait kar rha tha")
 
     return new Response("ok", { status: 200 });
   } catch (err) {
