@@ -121,3 +121,36 @@ export async function handleOrderWebhook(payload) {
     throw err 
   }
 }
+
+// function identifyOrderType(order) {
+//   // Check if order has required data
+//   if (!order || !order.line_items || order.line_items.length === 0) {
+//     return "UNKNOWN";
+//   }
+
+//   const source = order.source_name;
+//   const quantity = order.line_items[0].quantity;
+
+//   // Normal Order - Web source with client details
+//   if (source === "web" && 
+//       order.client_details !== null && 
+//       order.cart_token !== null && 
+//       order.browser_ip !== null) {
+//     return "NORMAL_ORDER";
+//   }
+
+//   // Subscription Order - subscription_contract source without client data
+//   if (source === "subscription_contract" && 
+//       order.client_details === null && 
+//       order.cart_token === null && 
+//       order.browser_ip === null) {
+    
+//     if (quantity > 3) return "SUBSCRIPTION_PREPAID";
+//     if (quantity === 1) return "SUBSCRIPTION_MONTHLY";
+//     return "SUBSCRIPTION_OTHER";
+//   }
+
+//   return "UNKNOWN";
+// }
+
+
