@@ -1,7 +1,7 @@
 // app/utils/fetchProduct.server.js
 import { callShopifyGraphQL } from './shopifyGraphQL.js';
 
-export async function fetchProductsFromAPI(shop, accessToken, first = 5, after = null) {
+export async function fetchProductsFromAPI(shop, accessToken, first = 15, after = null) {
   const query = `
     query GetProductsWithVariants($first: Int!, $after: String) {
       products(first: $first, after: $after) {
