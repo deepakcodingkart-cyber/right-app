@@ -1,123 +1,7 @@
+// @ts-nocheck
 import React, { useState, useCallback, useMemo } from 'react';
-import {  useLoaderData } from '@remix-run/react';
+import { useLoaderData } from '@remix-run/react';
 
-function transformShopifyProducts(shopifyData) {
-  console.log(1213543,shopifyData)
-  // Extract the products array from the data object
-  const products = shopifyData?.products || shopifyData || [];
-  
-  if (!Array.isArray(products)) {
-    console.error('Expected an array of products, but got:', typeof products, products);
-    return [];
-  }
-
-  return products.map((product, index) => {
-    // Generate a simple product ID
-    const productId = product.id && product.id.includes('/Product/') 
-      ? `p${product.id.split('/').pop()}` 
-      : `p${index + 1}`;
-
-    // Transform variants - handle cases where variants might be empty or undefined
-    const transformedVariants = Array.isArray(product.variants) 
-      ? product.variants.map((variant, variantIndex) => {
-          const variantId = variant.id && variant.id.includes('/ProductVariant/')
-            ? `v${variant.id.split('/').pop()}`
-            : `v${(index + 1) * 100 + variantIndex + 1}`;
-
-          // Generate variant title
-          let variantTitle = variant.title || 'Default';
-          
-          // Calculate availability - using random values as fallback since we don't see the actual variant structure
-          const available = variant.availableForSale !== false 
-            ? (variant.quantityAvailable || Math.floor(Math.random() * 50) + 5)
-            : 0;
-
-          // Format price
-          let price = '$0.00';
-          if (variant.price) {
-            if (typeof variant.price === 'string') {
-              price = `$${parseFloat(variant.price).toFixed(2)}`;
-            } else if (variant.price.amount) {
-              price = `$${parseFloat(variant.price.amount).toFixed(2)}`;
-            }
-          } else {
-            // Fallback price if not available in variant data
-            price = `$${(Math.random() * 100 + 10).toFixed(2)}`;
-          }
-
-          return {
-            id: variantId,
-            title: variantTitle,
-            available: available,
-            price: price
-          };
-        })
-      : [
-          // Fallback variant if no variants are provided
-          {
-            id: `v${(index + 1) * 100 + 1}`,
-            title: 'Default',
-            available: Math.floor(Math.random() * 50) + 5,
-            price: `$${(Math.random() * 100 + 10).toFixed(2)}`
-          }
-        ];
-
-    return {
-      id: productId,
-      title: product.title || `Product ${index + 1}`,
-      image: product.image || 'https://placehold.co/32x32/CCCCCC/ffffff?text=No+Image',
-      variants: transformedVariants
-    };
-  });
-}
-
-// Usage examples:
-// Option 1: If you have the full data object
-// const transformedData = transformShopifyProducts(yourData);
-
-// Option 2: If you want to extract products first
-// const transformedData = transformShopifyProducts(yourData.products);
-
-// Option 3: Safe extraction
-// const productsArray = yourData?.products || [];
-// const transformedData = transformShopifyProducts(productsArray);
-
-// Usage example:
-// const transformedData = transformShopifyProducts(yourShopifyData.products);
-
-// --- Mock Data ---
-const MOCK_PRODUCTS = [
-  {
-    id: 'p1',
-    title: "Vintage Denim Jacket",
-    image: "https://placehold.co/32x32/2563eb/ffffff?text=J",
-    variants: [
-      { id: 'v101', title: "Small / Blue", available: 15, price: "$59.99" },
-      { id: 'v102', title: "Medium / Blue", available: 22, price: "$59.99" },
-      { id: 'v103', title: "Large / Blue", available: 8, price: "$64.99" },
-    ],
-  },
-  {
-    id: 'p2',
-    title: "Graphic Cotton Tee",
-    image: "https://placehold.co/32x32/ef4444/ffffff?text=T",
-    variants: [
-      { id: 'v201', title: "White / S", available: 45, price: "$24.99" },
-      { id: 'v202', title: "Black / M", available: 30, price: "$24.99" },
-    ],
-  },
-  {
-    id: 'p3',
-    title: "Leather Messenger Bag",
-    image: "https://placehold.co/32x32/10b981/ffffff?text=B",
-    variants: [
-      { id: 'v301', title: "Brown", available: 10, price: "$129.00" },
-      { id: 'v302', title: "Black", available: 5, price: "$129.00" },
-    ],
-  },
-];
-
-// --- Standalone Component Replacements ---
 
 // Custom styled Button component
 const Button = ({ children, primary, onClick, disabled }) => (
@@ -138,17 +22,25 @@ const Button = ({ children, primary, onClick, disabled }) => (
 
 // Custom Checkbox component with indeterminate support
 const Checkbox = React.forwardRef(({ checked, indeterminate, label, onChange }, ref) => (
-  <label className="flex items-center cursor-pointer space-x-2 p-1 rounded-md hover:bg-gray-50" onClick={onChange}>
-    <input
-      type="checkbox"
-      checked={checked}
-      ref={el => el && (el.indeterminate = indeterminate)}
-      readOnly
-      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-    />
-    <span className="text-sm font-medium text-gray-900">{label}</span>
-  </label>
-));
+    <label className="flex items-center cursor-pointer space-x-2 p-1 rounded-md hover:bg-gray-50" onClick={onChange}>
+      <input
+        type="checkbox"
+        checked={checked}
+        ref={(el) => {
+          if (el) el.indeterminate = !!indeterminate;
+          if (typeof ref === 'function') ref(el);
+          else if (ref && typeof ref === 'object') {
+            // @ts-ignore
+            ref.current = el;
+          }
+        }}
+        readOnly
+        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+      />
+      <span className="text-sm font-medium text-gray-900">{label}</span>
+    </label>
+  )
+);
 
 // Simple Thumbnail component
 const Thumbnail = ({ source, alt }) => (
@@ -307,9 +199,14 @@ function SelectedVariantRow({ variant, onRemove }) {
 }
 
 export default function DiscountProductSelector() {
-  const { products: initialProducts = [] } = useLoaderData();
+  const loaderData = (useLoaderData());
+  const initialProducts = Array.isArray(loaderData)
+    ? loaderData
+    : Array.isArray(loaderData?.products)
+    ? loaderData.products
+    : [];
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [productData, setProductData] = useState(initialProducts);
+  const [productData] = useState(initialProducts);
   const [searchText, setSearchText] = useState('');
   
   // This holds the CONFIRMED (saved) selection of variant IDs
