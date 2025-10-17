@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { json } from "@remix-run/node";
 import { createDiscountOnShopify } from "../utils/discountMutation";
+import { getAccessToken } from "../utils/getAccessToken";
 
 /**
  * Remix API route to create a discount
@@ -19,7 +20,7 @@ export async function action({ request }) {
   try {
     const body = await request.json();
     const shop = process.env.SHOP_NAME;
-    const accessToken = "shpua_196fbc0bed343fe225e65d2416b4a2b8";
+    const accessToken = await getAccessToken();
 
     const result = await createDiscountOnShopify(shop, accessToken, body);
 
