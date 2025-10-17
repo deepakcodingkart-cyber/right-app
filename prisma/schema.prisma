@@ -1,19 +1,22 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
-// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
-// enough when changing adapters.
-// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
 datasource db {
-  provider = "sqlite"
-  url      = "file:dev.sqlite"
+  provider = "mysql"
+  url      = "mysql://root@localhost:3306/shopify_app"
 }
 
-model Session {
+model order_subscription_log {
+  id        Int        @id @default(autoincrement())
+  order_id  String
+  status    log_status
+  step      String
+  payload   Json
+  createdAt DateTime   @default(now())
+}
+
+model session {
   id            String    @id
   shop          String
   state         String
@@ -29,4 +32,9 @@ model Session {
   locale        String?
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
+}
+
+enum log_status {
+  SUCCESS
+  FAIL
 }

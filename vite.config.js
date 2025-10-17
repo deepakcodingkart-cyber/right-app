@@ -40,13 +40,10 @@ if (host === "localhost") {
 export default defineConfig({
   server: {
     allowedHosts: [host],
-    cors: {
-      preflightContinue: true,
-    },
+    cors: { preflightContinue: true },
     port: Number(process.env.PORT || 3000),
     hmr: hmrConfig,
     fs: {
-      // See https://vitejs.dev/config/server-options.html#server-fs-allow for more information
       allow: ["app", "node_modules"],
     },
   },
@@ -69,5 +66,10 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ["@shopify/app-bridge-react", "@shopify/polaris"],
+    exclude: [
+      "@shopify/shopify-app-remix/react",
+      "@shopify/shopify-app-remix/server",
+      "@shopify/shopify-app-remix/adapters/node",
+    ],
   },
 });

@@ -34,13 +34,16 @@
     "@shopify/shopify-app-remix": "^3.7.0",
     "@shopify/shopify-app-session-storage-prisma": "^6.0.0",
     "better-queue": "^3.8.12",
+    "bullmq": "^5.61.0",
     "isbot": "^5.1.0",
     "nodemailer": "^7.0.6",
     "prisma": "^6.2.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "redis": "^5.8.3",
     "remix-utils": "^9.0.0",
     "resend": "^6.1.1",
+    "svix": "^1.77.0",
     "vite-tsconfig-paths": "^5.0.1"
   },
   "devDependencies": {
