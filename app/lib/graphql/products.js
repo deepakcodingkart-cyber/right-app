@@ -53,3 +53,44 @@ export const DELETE_PRODUCT_MUTATION = `
     }
   }
 `;
+
+
+
+export function getProductsQuery() {
+  return `
+    query GetProductsWithVariants($first: Int!, $after: String) {
+      products(first: $first, after: $after) {
+        pageInfo {
+          hasNextPage
+          hasPreviousPage
+          endCursor
+          startCursor
+        }
+        edges {
+          cursor
+          node {
+            id
+            title
+            description
+            featuredImage {
+              url
+              altText
+            }
+            variants(first: 10) {
+              edges {
+                node {
+                  id
+                  title
+                  availableForSale
+                  inventoryQuantity
+                  price
+                  compareAtPrice
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+}
