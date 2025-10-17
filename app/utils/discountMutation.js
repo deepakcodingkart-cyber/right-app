@@ -1,45 +1,10 @@
+// app/utils/createDiscount.server.js
 import { callShopifyGraphQL } from "./shopifyGraphQL.js";
+import { getCreateDiscountMutation } from "../lib/graphql/discount.js"; // import the mutation
 
 export async function createDiscountOnShopify(shop, accessToken, discountData) {
-  const mutation = `
-    mutation CreateIndividualDiscountCode($basicCodeDiscount: DiscountCodeBasicInput!) {
-      discountCodeBasicCreate(basicCodeDiscount: $basicCodeDiscount) {
-        codeDiscountNode {
-          id
-          codeDiscount {
-            ... on DiscountCodeBasic {
-              title
-              codes(first: 1) {
-                nodes { code }
-              }
-              customerSelection {
-                ... on DiscountCustomers { customers { id } }
-              }
-              customerGets {
-                value {
-                  ... on DiscountAmount {
-                    amount { amount currencyCode }
-                    appliesOnEachItem
-                  }
-                  ... on DiscountPercentage {
-                    percentage
-                  }
-                }
-                items {
-                  ... on DiscountProducts {
-                    productVariants(first: 10) {
-                      nodes { id title }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-        userErrors { field message }
-      }
-    }
-  `;
+  // Get the mutation string from another file
+  const mutation = getCreateDiscountMutation();
 
   const { selectedCustomersDetails, selectedVariantsDetails, discountSettings } = discountData;
   const customerGIDs = selectedCustomersDetails.map(c => c.id);
@@ -48,9 +13,7 @@ export async function createDiscountOnShopify(shop, accessToken, discountData) {
 
   const customerGetsValue =
     valueType === "Percentage"
-      ? {
-          percentage: parseFloat(value) / 100,
-        }
+      ? { percentage: parseFloat(value) / 100 }
       : {
           discountAmount: {
             amount: value.toString(),
@@ -78,13 +41,11 @@ export async function createDiscountOnShopify(shop, accessToken, discountData) {
     },
   };
 
-
   const result = await callShopifyGraphQL(shop, accessToken, mutation, variables);
 
   if (result.errors) console.error("❌ GraphQL errors:", result.errors);
   const userErrors = result?.data?.discountCodeBasicCreate?.userErrors || [];
   if (userErrors.length > 0) console.warn("⚠️ User Errors:", userErrors);
 
-  console.log("✅ Shopify Discount Creation Result:", JSON.stringify(result, null, 2));
   return result;
 }

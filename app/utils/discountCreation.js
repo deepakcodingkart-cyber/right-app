@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 export const getAllVariants = (products) => 
   products.flatMap(p => p.variants.map(v => ({ 
     ...v, 
@@ -7,7 +7,7 @@ export const getAllVariants = (products) =>
   })));
 
 
-const baseUrl = 'https://jokes-tribune-disc-hist.trycloudflare.com/api/';
+const baseUrl = 'https://skin-reduce-grades-nowhere.trycloudflare.com/api/';
 
 export async function loader() {
 
@@ -49,7 +49,7 @@ export async function loader() {
   }
 }
 
-// @ts-nocheck
+
 
 /**
  * Create an individual discount through our Remix API

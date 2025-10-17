@@ -133,6 +133,18 @@ export default function DiscountProductSelector() {
     try {
       const response = await action(discountData);
       console.log('✅ Discount created successfully:', response);
+       setConfirmedVariantIds(new Set());
+      setConfirmedCustomerIds(new Set());
+      setDiscountState({
+        method: 'Discount code',
+        code: '',
+        valueType: 'Percentage', // "Percentage" or "Fixed"
+        value: '',
+        minimumRequirement: { type: 'none', value: '' },
+        maxUses: { limitTotal: false, totalCount: '', limitPerCustomer: false },
+        combinations: { product: false, order: false, shipping: false },
+        activeDates: { startDate: '', startTime: '', setEndDate: false, endDate: '', endTime: '' },
+      });
       alert('Discount saved successfully!');
     } catch (err) {
       console.error('❌ Error creating discount:', err);

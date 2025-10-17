@@ -1,43 +1,10 @@
 // app/utils/fetchProduct.server.js
 import { callShopifyGraphQL } from './shopifyGraphQL.js';
+import { getProductsQuery } from '../lib/graphql/products.js'; // import the query
 
 export async function fetchProductsFromAPI(shop, accessToken, first = 15, after = null) {
-  const query = `
-    query GetProductsWithVariants($first: Int!, $after: String) {
-      products(first: $first, after: $after) {
-        pageInfo {
-          hasNextPage
-          hasPreviousPage
-          endCursor
-          startCursor
-        }
-        edges {
-          cursor
-          node {
-            id
-            title
-            description
-            featuredImage {
-              url
-              altText
-            }
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  title
-                  availableForSale
-                  inventoryQuantity
-                  price
-                  compareAtPrice
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  `;
+  // Get the query from a separate file
+  const query = getProductsQuery();
 
   const result = await callShopifyGraphQL(shop, accessToken, query, { first, after });
   return transformProductsData(result.data.products);
