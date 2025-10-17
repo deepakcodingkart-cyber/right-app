@@ -47,12 +47,12 @@ function DiscountSettingsCard({ discountState, setDiscountState }) {
             >
               Discount code
             </button>
-            <button
+            {/* <button
               className={`px-4 py-2 text-sm font-medium rounded-r-lg border ${discountState.method === 'Automatic discount' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
               onClick={() => handleChange('method', 'Automatic discount')}
             >
               Automatic discount
-            </button>
+            </button> */}
         </div>
         </div>
 
@@ -208,7 +208,7 @@ function DiscountSettingsCard({ discountState, setDiscountState }) {
       <hr className="border-gray-200" />
 
       {/* Section 4: Combinations */}
-      <section>
+      {/* <section>
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Combinations</h2>
         <p className="text-sm text-gray-600 mb-3">This discount can be combined with:</p>
         <div className="space-y-2">
@@ -240,7 +240,7 @@ function DiscountSettingsCard({ discountState, setDiscountState }) {
             <span className="text-sm font-medium text-gray-700">Shipping discounts</span>
           </label>
         </div>
-      </section>
+      </section> */}
 
       <hr className="border-gray-200" />
       
