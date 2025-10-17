@@ -6,9 +6,10 @@ export const getAllVariants = (products) =>
     productImage: p.image 
   })));
 
+
+const baseUrl = 'https://jokes-tribune-disc-hist.trycloudflare.com/api/';
+
 export async function loader() {
-  // Base URL for the APIs
-  const baseUrl = 'https://mitsubishi-dryer-challenging-debian.trycloudflare.com/api/';
 
   try {
     // 1. Prepare fetch requests for both APIs
@@ -47,3 +48,36 @@ export async function loader() {
     };
   }
 }
+
+// @ts-nocheck
+
+/**
+ * Create an individual discount through our Remix API
+ * @param {Object} discountData - full discount data from UI
+ * @returns {Promise<Object>} - API response JSON
+ */
+export async function action(discountData) {
+
+  try {
+    const response = await fetch(baseUrl + 'discount/create', {
+      method: 'POST', // ✅ you must include this
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(discountData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("❌ API Error:", data);
+      throw new Error(data.message || "Failed to create discount");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("❌ Network Error:", error);
+    throw error;
+  }
+}
+
